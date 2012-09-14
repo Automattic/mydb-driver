@@ -1,6 +1,7 @@
 
 var expect = require('expect.js');
 var mydb = require('..');
+var monk = require('monk');
 var redis = require('redis');
 
 describe('mydb-driver', function(){
@@ -9,8 +10,13 @@ describe('mydb-driver', function(){
     var db = mydb('localhost/mydb-driver-test', { redis: false });
     var users = db.get('users');
 
-    it('should export `Collection`', function(){
+    it('should export extended `Collection`', function(){
       expect(users).to.be.a(mydb.Collection);
+      expect(mydb.Collection).to.not.be(monk.Collection);
+    });
+
+    it('should export monk exports', function(){
+      expect(mydb.Promise.constructor).to.be.a('function');
     });
 
     it('should work with updates', function(done){

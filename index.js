@@ -12,6 +12,7 @@ var monk = require('monk')
  */
 
 module.exports = exports = MyManager;
+exports.__proto__ = monk;
 exports.Collection = Collection;
 
 /**
