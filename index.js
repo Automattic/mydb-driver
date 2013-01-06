@@ -151,8 +151,13 @@ Collection.prototype.findAndModify = function(query, update, opts, fn){
  * @api public
  */
 
-Collection.prototype.update = function(search, update, options, fn){
-  var promise = MonkCollection.prototype.update.call(this, search, update, options, fn);
+var oldUpdate = MonkCollection.prototype.update;
+
+Collection.prototype.update = function(search, update, opts, fn){
+  if ('string' == typeof search || 'function' == typeof search.toHexString) {
+    return this.update({ _id: search }, update, opts, fn);
+  }
+  var promise = oldUpdate.call(this, search, update, opts, fn);
   if (search._id) this.pub(search, update, promise);
   return promise;
 };
