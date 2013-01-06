@@ -1,4 +1,10 @@
 
+0.4.0 / 2013-01-05
+==================
+
+  * mydb-driver: fix `update` for strings and oids
+  * package: bumped `monk`
+
 0.3.2 / 2012-10-30
 ==================
 
