@@ -1,4 +1,10 @@
 
+0.5.0 / 2013-04-03
+==================
+
+  * test: added failing tests
+  * index: resolve update not targeted to `_id` as `findAndModify`
+
 0.4.1 / 2013-03-03
 ==================
 
