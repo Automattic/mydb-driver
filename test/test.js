@@ -8,7 +8,7 @@ describe('mydb-driver', function(){
 
   describe('`op` event', function(){
     var db = mydb('localhost/mydb-driver-test', { redis: false });
-    var users = db.get('users');
+    var users = db.get('users-' + Date.now());
 
     it('should export extended `Collection`', function(){
       expect(users).to.be.a(mydb.Collection);
@@ -147,6 +147,43 @@ describe('mydb-driver', function(){
           expect(query).to.eql({});
           expect(op).to.eql({ $pull: { a: 'woot' } });
           done();
+        });
+      });
+    });
+
+    it('should work with non-multi update', function(done){
+      users.insert({ a: 'haha' }, function(err, user){
+        if (err) return done(err);
+        users.update({ a: 'haha' }, { $set: { a: 'b' } }, function(err){
+          expect(err).to.be(null);
+        });
+        users.once('op', function(id, query, op){
+          expect(id).to.be(user._id.toString());
+          expect(query).to.eql({});
+          expect(op).to.eql({ $set: { a: 'b' } });
+          users.findOne({ a: 'b' }, function(err, u){
+            expect(err).to.be(null);
+            expect(u._id.toString()).to.be(id);
+            done();
+          });
+        });
+      });
+    });
+
+    it('should not work multi update', function(done){
+      users.insert({ test: 'test' }, function(err, user){
+        users.once('op', function onop(){
+          throw new Error('Nope');
+        });
+
+        users.update({ test: 'test' }, { $set: { test: 'a' } }, { multi: true }, function(err){
+          expect(err).to.be(null);
+          users.findOne({ test: 'a' }, function(err, us){
+            expect(err).to.be(null);
+            expect(us).to.be.an('object');
+            users.removeAllListeners('op');
+            done();
+          });
         });
       });
     });
