@@ -157,7 +157,29 @@ Collection.prototype.update = function(search, update, opts, fn){
   if ('string' == typeof search || 'function' == typeof search.toHexString) {
     return this.update({ _id: search }, update, opts, fn);
   }
-  var promise = oldUpdate.call(this, search, update, opts, fn);
-  if (search._id) this.pub(search, update, promise);
+
+  var self = this;
+  var promise;
+
+  if ('function' == typeof opts) {
+    fn = opts;
+    opts = {};
+  }
+
+  if (search._id || opts.multi) {
+    promise = oldUpdate.call(this, search, update, opts, fn);
+    if (search._id) this.pub(search, update, promise);
+  } else if (!opts.multi) {
+    // override some options
+    opts.safe = true;
+    opts.fields = { _id: 1 };
+
+    promise = this.findAndModify(search, update, opts, fn);
+    promise.on('success', function(doc){
+      var id = doc._id.toString();
+      self.emit('op', id, {}, update);
+    });
+  }
+
   return promise;
 };
