@@ -176,6 +176,7 @@ Collection.prototype.update = function(search, update, opts, fn){
 
     promise = this.findAndModify(search, update, opts, fn);
     promise.on('success', function(doc){
+      if (!doc) return; // noop
       var id = doc._id.toString();
       self.emit('op', id, {}, update);
     });
