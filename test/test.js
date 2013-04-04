@@ -170,6 +170,13 @@ describe('mydb-driver', function(){
       });
     });
 
+    it('should work with non-multi update that noops', function(done){
+      users.update({ a: Date.now() }, { $set: { a: 'b' } }, function(err){
+        expect(err).to.be(null);
+        done();
+      });
+    });
+
     it('should not work multi update', function(done){
       users.insert({ test: 'test' }, function(err, user){
         users.once('op', function onop(){
