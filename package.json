@@ -1,6 +1,6 @@
 {
   "name": "mydb-driver",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "`monk` superset that publishes update/findAndModify queries",
   "private": true,
   "dependencies": {

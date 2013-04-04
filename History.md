@@ -1,4 +1,10 @@
 
+0.5.1 / 2013-04-04
+==================
+
+  * index: added support for non-multi update noop w/no _id
+  * test: added failing test for update noops
+
 0.5.0 / 2013-04-03
 ==================
 
