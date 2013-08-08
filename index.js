@@ -136,7 +136,12 @@ Collection.prototype.findAndModify = function(query, update, opts, fn){
   if ('string' == typeof query.query || query.query.toHexString) {
     query.query = { _id: query.query };
   }
-  if (query.query._id) this.pub(query.query, query.update, promise);
+  var self = this;
+  promise.on('success', function(doc){
+    if (!doc) return;
+    var id = doc._id.toString();
+    self.emit('op', id, {}, query.update);
+  });
   return promise;
 };
 
@@ -173,13 +178,7 @@ Collection.prototype.update = function(search, update, opts, fn){
     // override some options
     opts.safe = true;
     opts.fields = { _id: 1 };
-
     promise = this.findAndModify(search, update, opts, fn);
-    promise.on('success', function(doc){
-      if (!doc) return; // noop
-      var id = doc._id.toString();
-      self.emit('op', id, {}, update);
-    });
   }
 
   return promise;
