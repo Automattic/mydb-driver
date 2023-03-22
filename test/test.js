@@ -4,10 +4,14 @@ var mydb = require('..');
 var monk = require('monk');
 var redis = require('redis');
 
+const getTestDbConnection = ( options = {} ) => {
+  return mydb( 'localhost:31003/mydb-driver-test', options );
+};
+
 describe('mydb-driver', function(){
 
   describe('`op` event', function(){
-    var db = mydb('localhost:31003/mydb-driver-test', { redis: false });
+    var db = getTestDbConnection( { redis: false } );
     var users = db.get('users-' + Date.now());
 
     it('should export extended `Collection`', function(){
@@ -263,8 +267,78 @@ describe('mydb-driver', function(){
     });
   });
 
+  describe( 'queries', () => {
+    const db = getTestDbConnection( { redis: false } );
+    const col = db.get( 'test_queries' );
+
+    it( 'should work with simple findOne', ( done ) => {
+      col
+        .insert( {} )
+        .then( ( doc ) => {
+          col
+            .findOne( doc._id )
+            .then( ( found ) => {
+              expect( found._id ).to.eql( doc._id );
+              done();
+            } )
+            .catch( ( e ) => done( e ) );
+        } )
+        .catch( ( e ) => done( e ) );
+    } );
+
+    it( 'findOne should be able to take a string as ID', ( done ) => {
+      col
+        .insert( {} )
+        .then( ( doc ) => {
+          col
+            .findOne( doc._id.toString() )
+            .then( ( found ) => {
+              expect( found._id ).to.eql( doc._id );
+              done();
+            } )
+            .catch( ( e ) => done( e ) );
+        } )
+        .catch( ( e ) => done( e ) );
+    } );
+
+    it( 'should work with findOne and field, using deprecated syntax', ( done ) => {
+      col
+        .insert( { 'should': 'work', 'another': 'field' } )
+        .then( ( doc ) => {
+          col
+            .findOne( doc._id, 'should' )
+            .then( ( found ) => {
+              expect( found._id ).to.eql( doc._id );
+              expect( found.should ).to.eql( 'work' );
+              expect( found ).to.not.have.property( 'another' );
+              done();
+            } )
+            .catch( ( e ) => done( e ) );
+        } )
+        .catch( ( e ) => done( e ) );
+    } );
+
+    it( 'should work with findOne and field, using current syntax', ( done ) => {
+      col
+        .insert( { 'should': 'work', 'another': 'field' } )
+        .then( ( doc ) => {
+          col
+            .findOne( doc._id, { fields: { another: 1 } } )
+            .then( ( found ) => {
+              expect( found._id ).to.eql( doc._id );
+              expect( found.another ).to.eql( 'field' );
+              expect( found ).to.not.have.property( 'should' );
+              done();
+            } )
+            .catch( ( e ) => done( e ) );
+        } )
+        .catch( ( e ) => done( e ) );
+    } );
+
+  } );
+
   describe('redis', function(){
-    var db = mydb('localhost:31003/mydb-driver-test', { redisPort: 31001 });
+    var db = getTestDbConnection( { redisPort: 31001 } );
     var users = db.get('users');
 
     var sub = redis.createClient( { url: 'redis://127.0.0.1:31001' } );
