@@ -3,9 +3,10 @@
  * Module dependencies.
  */
 
-var monk = require('monk')
-  , redis = require('redis')
-  , debug = require('debug')('mydb-driver');
+const monk = require('monk');
+const redis = require('redis');
+const debug = require('debug')('mydb-driver');
+const EventEmitter = require('events');
 
 /**
  * Module exports.
@@ -41,12 +42,16 @@ function MyManager(uri, opts, fn){
   var client = opts.redis;
 
   // if we got a host/port
-  if (!client && false !== client) {
+  if ( ! client && false !== client ) {
     var redisHost = opts.redisHost || '127.0.0.1';
     var redisPort = opts.redisPort || 6379;
 
     debug('initializing redis client to %s:%d', redisHost, redisPort);
-    client = redis.createClient(opts.redisPort, opts.redisHost);
+
+    client = redis.createClient( { url: 'redis://' + redisHost + ':' + redisPort } );
+
+    client.connect()
+      .catch( ( e ) => debug( 'Redis connection failed %s', e ) )
   }
 
   this.redis = client;
@@ -68,17 +73,18 @@ MyManager.prototype.__proto__ = monk.prototype;
 
 MyManager.prototype.get = function(name){
   if (!this.collections[name]) {
-    this.collections[name] = new Collection(this, name);
+    this.collections[name] = new Collection( this, name, Object.assign({}, this._collectionOptions || {}) );
     if (this.redis) {
       var self = this;
       this.collections[name].on('op', function(id, query, op){
         debug('publishing to redis %s channel', id);
-        self.redis.publish(id, JSON.stringify([query, op]));
+        self.redis.publish( id, JSON.stringify([query, op]) );
       });
     }
   }
   return this.collections[name];
 };
+
 
 /**
  * Monk collection.
@@ -88,8 +94,8 @@ MyManager.prototype.get = function(name){
  * @api public
  */
 
-function Collection(manager, name){
-  MonkCollection.call(this, manager, name);
+function Collection(manager, name, options) {
+  MonkCollection.call( this, manager, name, options || { middlewares: null } );
 };
 
 /**
@@ -97,6 +103,37 @@ function Collection(manager, name){
  */
 
 Collection.prototype.__proto__ = MonkCollection.prototype;
+
+Collection.prototype.ensureEventEmitterExists = function() {
+  if ( ! this._eventEmitter ) {
+    this._eventEmitter = new EventEmitter();
+  }
+};
+
+Collection.prototype.on = function() {
+  this.ensureEventEmitterExists();
+  return this._eventEmitter.on( ...arguments );
+};
+
+Collection.prototype.emit = function() {
+  this.ensureEventEmitterExists();
+  return this._eventEmitter.emit( ...arguments );
+};
+
+Collection.prototype.once = function() {
+  this.ensureEventEmitterExists();
+  return this._eventEmitter.once( ...arguments );
+};
+
+Collection.prototype.removeListener = function() {
+  this.ensureEventEmitterExists();
+  return this._eventEmitter.removeListener( ...arguments );
+};
+
+Collection.prototype.removeAllListeners = function() {
+  this.ensureEventEmitterExists();
+  return this._eventEmitter.removeAllListeners( ...arguments );
+};
 
 /**
  * Publishes an operation
@@ -109,7 +146,7 @@ Collection.prototype.__proto__ = MonkCollection.prototype;
 Collection.prototype.pub = function(query, op, promise){
   var self = this;
   debug('waiting on update success to emit op');
-  promise.on('success', function () {
+  promise.then(function () {
     debug('emitting op %j for query %j', op, query);
     var id = query._id.toString();
     delete query._id;
@@ -128,20 +165,30 @@ Collection.prototype.pub = function(query, op, promise){
  * @api public
  */
 
-Collection.prototype.findAndModify = function(query, update, opts, fn){
-  var promise = MonkCollection.prototype.findAndModify.call(this, query, update, opts, fn);
-  if ('object' != typeof query.query && 'object' != typeof query.update) {
-    query = { query: query, update: update };
+Collection.prototype.findAndModify = function( query, update, opts, fn ) {
+  const queryObject = {}
+
+  if ( 'object' === typeof query.query ) {
+    queryObject.query = query.query;
+  } else if ( 'string' === typeof query.query || query.query?.toHexString ) {
+    queryObject.query = { _id: query.query };
+  } else {
+    queryObject.query = query;
   }
-  if ('string' == typeof query.query || query.query.toHexString) {
-    query.query = { _id: query.query };
+
+  if ( 'object' === typeof query.update ) {
+    queryObject.update = query.update;
+  } else {
+    queryObject.update = update;
   }
+
+  var promise = MonkCollection.prototype.findOneAndUpdate.call(this, queryObject.query, queryObject.update, opts, fn);
   var self = this;
-  promise.on('success', function(doc){
+  promise.then( function( doc ) {
     if (!doc) return;
     var id = doc._id.toString();
-    self.emit('op', id, {}, query.update);
-  });
+    self.emit('op', id, {}, queryObject.update);
+  } );
   return promise;
 };
 

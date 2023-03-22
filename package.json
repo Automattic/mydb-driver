@@ -3,8 +3,8 @@
   "version": "0.5.2",
   "description": "`monk` superset that publishes update/findAndModify queries",
   "dependencies": {
-    "monk": "0.7.1",
-    "redis": "0.8.1",
+    "monk": "https://github.com/Automattic/monk.git",
+    "redis": "^4.6.5",
     "debug": "*"
   },
   "devDependencies": {
