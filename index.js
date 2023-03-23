@@ -34,9 +34,17 @@ var MonkCollection = monk.Collection;
 
 function MyManager(uri, opts, fn){
   if (!(this instanceof MyManager)) return new MyManager(uri, opts, fn);
-  monk.call(this, uri, opts, fn);
 
   opts = opts || {};
+
+  const mongoOptions = {};
+  // Filter out redis options so the mongo driver doesn't trip
+  Object.keys( opts )
+    .filter( ( key ) => -1 === [ 'redis', 'redisHost', 'redisPort' ].indexOf( key ) )
+    .forEach( ( key ) => mongoOptions[ key ] = opts[ key ] );
+
+  monk.call(this, uri, mongoOptions, fn);
+
 
   // redis client
   var client = opts.redis;
