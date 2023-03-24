@@ -112,35 +112,31 @@ function Collection(manager, name, options) {
 
 Collection.prototype.__proto__ = MonkCollection.prototype;
 
-Collection.prototype.ensureEventEmitterExists = function() {
+Collection.prototype.getEventEmitter = function() {
   if ( ! this._eventEmitter ) {
     this._eventEmitter = new EventEmitter();
   }
+  return this._eventEmitter;
 };
 
 Collection.prototype.on = function() {
-  this.ensureEventEmitterExists();
-  return this._eventEmitter.on( ...arguments );
+  return this.getEventEmitter().on( ...arguments );
 };
 
 Collection.prototype.emit = function() {
-  this.ensureEventEmitterExists();
-  return this._eventEmitter.emit( ...arguments );
+  return this.getEventEmitter().emit( ...arguments );
 };
 
 Collection.prototype.once = function() {
-  this.ensureEventEmitterExists();
-  return this._eventEmitter.once( ...arguments );
+  return this.getEventEmitter().once( ...arguments );
 };
 
 Collection.prototype.removeListener = function() {
-  this.ensureEventEmitterExists();
-  return this._eventEmitter.removeListener( ...arguments );
+  return this.getEventEmitter().removeListener( ...arguments );
 };
 
 Collection.prototype.removeAllListeners = function() {
-  this.ensureEventEmitterExists();
-  return this._eventEmitter.removeAllListeners( ...arguments );
+  return this.getEventEmitter().removeAllListeners( ...arguments );
 };
 
 /**
